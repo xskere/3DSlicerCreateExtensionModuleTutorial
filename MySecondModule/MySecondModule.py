@@ -32,7 +32,7 @@ class MySecondModule(ScriptedLoadableModule):
 
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
-        self.parent.title = _("MySecondModule")  # TODO: make this more human readable by adding spaces
+        self.parent.title = _("Sphere from two points")  # TODO: make this more human readable by adding spaces
         # TODO: set categories (folders where the module shows up in the module selector)
         self.parent.categories = [translate("qSlicerAbstractCoreModule", "Examples")]
         self.parent.dependencies = []  # TODO: add here list of module names that this module requires
