@@ -15,6 +15,7 @@ from slicer.parameterNodeWrapper import (
 )
 
 from slicer import vtkMRMLScalarVolumeNode
+from slicer import vtkMRMLMarkupsFiducialNode
 
 
 #
@@ -117,7 +118,7 @@ class MySecondModuleParameterNode:
     invertedVolume - The output volume that will contain the inverted thresholded volume.
     """
 
-    inputVolume: vtkMRMLScalarVolumeNode
+    inputVolume: vtkMRMLMarkupsFiducialNode
     imageThreshold: Annotated[float, WithinRange(-100, 500)] = 100
     invertThreshold: bool = False
     thresholdedVolume: vtkMRMLScalarVolumeNode
@@ -274,6 +275,19 @@ class MySecondModuleLogic(ScriptedLoadableModuleLogic):
 
     def getParameterNode(self):
         return MySecondModuleParameterNode(super().getParameterNode())
+
+    def getCenterOfMass(self, markupsNode):
+        centerOfMass = [0, 0, 0]
+        import numpy as np
+        sumPos = np.zeros(3)
+        for i in range(markupsNode.GetNumberOfControlPoints()):
+            pos = markupsNode.GetNthControlPointPosition(i)
+        sumPos += pos
+
+        centerOfMass = sumPos / markupsNode.GetNumberOfControlPoints()
+
+        logging.info(f'Center of mass for {markupsNode.GetName()}: {centerOfMass}')
+        return centerOfMass
 
     def process(self,
                 inputVolume: vtkMRMLScalarVolumeNode,
