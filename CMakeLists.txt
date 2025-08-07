@@ -19,6 +19,7 @@ include(${Slicer_USE_FILE})
 #-----------------------------------------------------------------------------
 # Extension modules
 add_subdirectory(MyFirstModule)
+add_subdirectory(MySecondModule)
 ## NEXT_MODULE
 
 #-----------------------------------------------------------------------------
