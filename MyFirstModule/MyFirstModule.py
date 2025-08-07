@@ -273,6 +273,19 @@ class MyFirstModuleLogic(ScriptedLoadableModuleLogic):
     def getParameterNode(self):
         return MyFirstModuleParameterNode(super().getParameterNode())
 
+    def getCenterOfMass(self, markupsNode):
+        centerOfMass = [0, 0, 0]
+        import numpy as np
+        sumPos = np.zeros(3)
+        for i in range(markupsNode.GetNumberOfControlPoints()):
+            pos = markupsNode.GetNthControlPointPosition(i)
+        sumPos += pos
+
+        centerOfMass = sumPos / markupsNode.GetNumberOfControlPoints()
+
+        logging.info(f'Center of mass for {markupsNode.GetName()}: {centerOfMass}')
+        return centerOfMass
+
     def process(self,
                 inputVolume: vtkMRMLScalarVolumeNode,
                 outputVolume: vtkMRMLScalarVolumeNode,
