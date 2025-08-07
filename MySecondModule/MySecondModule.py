@@ -3,6 +3,7 @@ import os
 from typing import Annotated, Optional
 
 import vtk
+import math
 
 import slicer
 from slicer.i18n import tr as _
@@ -16,6 +17,7 @@ from slicer.parameterNodeWrapper import (
 
 from slicer import vtkMRMLScalarVolumeNode
 from slicer import vtkMRMLMarkupsFiducialNode
+from slicer import vtkMRMLModelNode
 
 
 #
@@ -119,6 +121,7 @@ class MySecondModuleParameterNode:
     inputVolume: vtkMRMLMarkupsFiducialNode
     imageThreshold: Annotated[float, WithinRange(-100, 500)] = 100
     thresholdedVolume: vtkMRMLScalarVolumeNode
+    outputVolume: vtkMRMLModelNode
 
 
 #
@@ -253,12 +256,51 @@ class MySecondModuleWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             self.ui.applyButton.enabled = False
 
     def onApplyButton(self) -> None:
-        """Run processing when user clicks "Apply" button."""
+        """Run processing when user clicks 'Apply' button."""
         with slicer.util.tryWithErrorDisplay(_("Failed to compute results."), waitCursor=True):
-            # Compute output
-            self.logic.process(self.ui.inputSelector.currentNode(), self.ui.outputSelector.currentNode(),
-                               self.ui.imageThresholdSliderWidget.value)
-            self.ui.centerOfMassValueLabel.text = str(self.logic.centerOfMass)
+            # Retrieve the positions of the two markup points
+            markupsNode = self.ui.inputSelector.currentNode()
+            if markupsNode.GetNumberOfControlPoints() < 2:
+                raise ValueError("At least two markup points are required to align the sphere.")
+
+            point1 = [0.0, 0.0, 0.0]
+            point2 = [0.0, 0.0, 0.0]
+            markupsNode.GetNthControlPointPosition(0, point1)
+            markupsNode.GetNthControlPointPosition(1, point2)
+
+            # Compute the midpoint and radius
+            midpoint = [(point1[i] + point2[i]) / 2.0 for i in range(3)]
+            self.ui.centerOfMassValueLabel.text = str(midpoint)
+            radius = math.sqrt(sum((point1[i] - midpoint[i]) ** 2 for i in range(3)))
+
+            # Create a sphere source
+            sphereSource = vtk.vtkSphereSource()
+            sphereSource.SetCenter(midpoint)
+            sphereSource.SetRadius(radius)
+            sphereSource.Update()
+
+            # Get or create the output model node
+            if not self._parameterNode.outputVolume:
+                self._parameterNode.outputVolume = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode",
+                                                                                      "AlignedSphere")
+
+            # Set the sphere polydata to the output volume
+            self._parameterNode.outputVolume.SetAndObservePolyData(sphereSource.GetOutput())
+
+            # Ensure the outputSelector points to the sphere
+            self.ui.outputSelector.setCurrentNode(self._parameterNode.outputVolume)
+
+            # Create or update the display node
+            sphereDisplayNode = self._parameterNode.outputVolume.GetDisplayNode()
+            if not sphereDisplayNode:
+                sphereDisplayNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelDisplayNode")
+                self._parameterNode.outputVolume.SetAndObserveDisplayNodeID(sphereDisplayNode.GetID())
+
+            # Set display properties
+            sphereDisplayNode.SetColor(1, 0, 0)  # Set the color of the sphere (red)
+            sphereDisplayNode.SetOpacity(0.5)  # Set the opacity of the sphere
+            sphereDisplayNode.SetVisibility2D(True)  # Enable visibility in 2D slice views
+
 
 
 #
